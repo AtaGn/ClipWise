@@ -34,23 +34,12 @@ ClipWise is a Retrieval-Augmented Generation (RAG) based system that allows user
 
 ## Key Features
 
-### Transcription
-Converts video audio into accurate text using OpenAI Whisper, making content searchable and analyzable.
-
-### Semantic Search
-Retrieves the most relevant transcript segments using ChromaDB vector database for precise context matching.
-
-### AI Chat Assistant
-Provides contextual answers to questions using the Groq API powered by LLaMA 3.3 (70B parameters).
-
-### Quiz Generator
-Creates multiple-choice questions automatically from video content to test understanding.
-
-### Flashcards
-Generates interactive flashcards highlighting key points and concepts from the video.
-
-### Study Notes
-Produces structured, summarized learning notes organized by topics covered in the video.
+- **Transcription:** Converts video audio into accurate text using OpenAI Whisper, making content searchable and analyzable.
+- **Semantic Search:** Retrieves the most relevant transcript segments using ChromaDB vector database for precise context matching.
+- **AI Chat Assistant:** Provides contextual answers to questions using the Groq API powered by LLaMA 3.3 (70B parameters).
+- **Quiz Generator:** Creates multiple-choice questions automatically from video content to test understanding.
+- **Flashcards:** Generates interactive flashcards highlighting key points and concepts from the video.
+- **Study Notes:** Produces structured, summarized learning notes organized by topics covered in the video.
 
 ---
 
