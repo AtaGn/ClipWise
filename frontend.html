@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClipWise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { font-family: 'Inter', -apple-system, sans-serif; }
+        body { overflow: hidden; }
+        .chat-bubble-user {
+            background: linear-gradient(135deg, #2563eb 0%, #8b5cf6 100%);
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+        }
+        .chat-bubble-assistant {
+            background-color: white;
+            color: #1e293b;
+            border-radius: 18px 18px 18px 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .timestamp-link {
+            color: #2563eb;
+            cursor: pointer;
+            padding: 4px 8px;
+            background: rgba(37, 99, 235, 0.1);
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.75rem;
+            display: inline-block;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+        .timestamp-link:hover { background: rgba(37, 99, 235, 0.2); }
+        .video-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .video-item:hover { background: rgba(37, 99, 235, 0.05); }
+        .video-item.active {
+            background: rgba(37, 99, 235, 0.1);
+            border-left: 3px solid #2563eb;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            transform: translateY(-1px);
+        }
+        .btn-secondary {
+            background: white;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+        }
+        .input-field {
+            background: white;
+            border: 1px solid #e2e8f0;
+        }
+        .input-field:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+    </style>
+</head>
+<body class="h-screen bg-gray-50">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
+            <div class="p-5 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+                            <img src="/assets/logo.png" alt="ClipWise Logo" class="w-full h-full object-contain">
+                        </div>
+                        <div>
+                            <h1 class="text-lg font-bold text-gray-800">ClipWise</h1>
+                            <p class="text-xs text-gray-500">AI Assistant</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-5 border-b border-gray-100">
+                <button onclick="showNewVideoModal()" class="w-full py-3 btn-primary rounded-lg font-medium flex items-center justify-center gap-2">
+                    <i class="fas fa-plus"></i> Add New Video
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3"><i class="fas fa-history text-gray-400 mr-2"></i>Recent Videos</h3>
+                <div id="videoList" class="space-y-2">
+                    <div class="text-center py-8">
+                        <i class="fas fa-video text-gray-300 text-2xl mb-2"></i>
+                        <p class="text-sm text-gray-400">No videos yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-gray-200 bg-gray-50">
+                <div class="text-xs font-medium text-gray-700 mb-2 flex items-center justify-between">
+                    <span><i class="fas fa-key text-gray-400 mr-2"></i>API Key</span>
+                    <a href="https://console.groq.com/keys" target="_blank" 
+                    class="text-blue-600 hover:text-blue-800 font-semibold text-[11px]">
+                        Get your API key ↗
+                    </a>
+                </div>
+                <input type="password" id="apiKey" placeholder="Enter Groq API key" 
+                    class="w-full px-3 py-2 text-sm input-field rounded-lg"/>
+            </div>
+
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col bg-gray-50">
+            <div class="p-5 border-b border-gray-200 bg-white">
+                <div id="chatHeader">
+                    <h1 class="text-xl font-bold text-gray-800">ClipWise</h1>
+                    <p class="text-sm text-gray-600">Load a video to start</p>
+                </div>
+            </div>
+
+            <div id="chatContainer" class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                <div class="text-center max-w-lg mx-auto mt-16">
+                    <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-robot text-blue-500 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Welcome!</h3>
+                    <p class="text-gray-600 text-sm">Load a YouTube video to start analyzing.</p>
+                </div>
+            </div>
+
+            <div class="p-5 border-t border-gray-200 bg-white">
+                <div class="max-w-4xl mx-auto">
+                    <div class="flex gap-2 mb-3">
+                        <button onclick="openStudyBuddy('quiz')" id="quizBtn" disabled class="px-3 py-1.5 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 disabled:opacity-50">
+                            <i class="fas fa-question-circle mr-1"></i> Quiz
+                        </button>
+                        <button onclick="openStudyBuddy('flashcards')" id="flashcardsBtn" disabled class="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 disabled:opacity-50">
+                            <i class="fas fa-layer-group mr-1"></i> Flashcards
+                        </button>
+                        <button onclick="openStudyBuddy('notes')" id="notesBtn" disabled class="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 disabled:opacity-50">
+                            <i class="fas fa-file-alt mr-1"></i> Notes
+                        </button>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <input id="chatInput" type="text" placeholder="Ask about the video..." 
+                            class="flex-1 px-4 py-3 input-field rounded-lg" disabled/>
+                        <button id="sendBtn" onclick="sendMessage()" disabled
+                            class="px-6 py-3 btn-primary rounded-lg font-medium">
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="w-96 bg-white border-l border-gray-200 flex flex-col">
+            <div class="p-5 border-b border-gray-200">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Video Player</h3>
+                <div id="videoPlayer" class="bg-gray-900 rounded-lg aspect-video flex items-center justify-center">
+                    <div class="text-center text-gray-400">
+                        <i class="fas fa-film text-2xl mb-2"></i>
+                        <p class="text-sm">No video</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col p-5 overflow-hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-700">Transcript</h3>
+                    <span id="transcriptLang" class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full"></span>
+                </div>
+                <div id="transcriptBox" class="flex-1 overflow-y-auto custom-scrollbar text-sm text-gray-600 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="text-center py-8">
+                        <i class="fas fa-align-left text-gray-300 text-xl mb-2"></i>
+                        <p class="text-sm text-gray-400">Transcript here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Modal -->
+    <div id="newVideoModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-xl font-bold text-gray-800">Add Video</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-5">
+                <input id="videoUrlInput" placeholder="https://www.youtube.com/watch?v=..."
+                    class="w-full px-4 py-3 input-field rounded-lg"/>
+            </div>
+            
+            <div id="modalStatus" class="hidden mb-5 p-3 rounded-lg text-sm"></div>
+            
+            <!-- Progress Bar -->
+            <div id="progressContainer" class="hidden mb-5">
+                <div class="flex justify-between items-center mb-2">
+                    <span id="progressText" class="text-sm font-medium text-gray-700">Processing...</span>
+                    <span id="progressPercent" class="text-sm font-medium text-blue-600">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+                <p id="progressSubtext" class="text-xs text-gray-500 mt-2">Downloading audio...</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="closeModal()" class="flex-1 px-4 py-3 btn-secondary rounded-lg">Cancel</button>
+                <button onclick="loadVideo()" id="loadBtn" class="flex-1 px-4 py-3 btn-primary rounded-lg">Load</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Study Buddy Modal -->
+    <div id="studyBuddyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                    <i id="studyBuddyIcon" class="fas fa-graduation-cap text-purple-600"></i>
+                    <span id="studyBuddyTitle">Study Buddy</span>
+                </h2>
+                <button onclick="closeStudyBuddy()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div id="studyBuddyContent" class="p-6 overflow-y-auto custom-scrollbar" style="max-height: calc(90vh - 140px);"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentVideoId = null;
+        let videoHistory = {};
+        let quizState = { questions: [], currentQuestion: 0, score: 0, answers: [] };
+        let currentCardIndex = 0;
+        let showingFront = true;
+
+        function showNewVideoModal() {
+            document.getElementById('newVideoModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('newVideoModal').classList.add('hidden');
+            document.getElementById('videoUrlInput').value = '';
+        }
+
+        async function loadVideo() {
+            const url = document.getElementById('videoUrlInput').value.trim();
+            const btn = document.getElementById('loadBtn');
+            
+            if (!url) return alert('Enter a URL');
+            
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            
+            // Show progress bar
+            showProgress(0, 'Starting...', 'Initializing transcription');
+            
+            try {
+                // Simulate progress during download and transcription
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 1;
+                    if (progress <= 30) {
+                        updateProgress(progress, 'Downloading Audio', 'Fetching video from YouTube...');
+                    } else if (progress <= 90) {
+                        updateProgress(progress, 'Transcribing Audio', 'AI is processing the audio...');
+                    } else if (progress < 95) {
+                        updateProgress(progress, 'Finalizing', 'Creating embeddings...');
+                    }
+                }, 200); // Update every 200ms
+                
+                const res = await fetch('http://localhost:5000/api/transcribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+                
+                clearInterval(progressInterval);
+                updateProgress(100, 'Complete!', 'Video processed successfully');
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                
+                // Small delay to show 100%
+                setTimeout(() => {
+                    hideProgress();
+                    videoHistory[data.video_id] = data;
+                    switchToVideo(data.video_id);
+                    addVideoToHistory(data);
+                    closeModal();
+                }, 500);
+                
+            } catch (e) {
+                hideProgress();
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Load';
+            }
+        }
+
+        function showProgress(percent, text, subtext) {
+            const container = document.getElementById('progressContainer');
+            container.classList.remove('hidden');
+            updateProgress(percent, text, subtext);
+        }
+
+        function updateProgress(percent, text, subtext) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressText').textContent = text;
+            document.getElementById('progressSubtext').textContent = subtext;
+        }
+
+        function hideProgress() {
+            document.getElementById('progressContainer').classList.add('hidden');
+            document.getElementById('progressBar').style.width = '0%';
+        }
+
+        function switchToVideo(videoId) {
+            const data = videoHistory[videoId];
+            if (!data) return;
+            
+            currentVideoId = videoId;
+            
+            document.querySelectorAll('.video-item').forEach(el => el.classList.remove('active'));
+            const item = document.querySelector(`[data-video-id="${videoId}"]`);
+            if (item) item.classList.add('active');
+            
+            document.getElementById('videoPlayer').innerHTML = 
+                `<iframe id="ytPlayer" class="rounded-lg" width="100%" height="100%" 
+                    src="https://www.youtube.com/embed/${videoId}?enablejsapi=1" 
+                    frameborder="0" allowfullscreen></iframe>`;
+            
+            const box = document.getElementById('transcriptBox');
+            document.getElementById('transcriptLang').textContent = data.language.toUpperCase();
+            
+            if (data.chunks?.length) {
+                box.innerHTML = data.chunks.map(c => `
+                    <div class="mb-3 p-3 hover:bg-white rounded-lg cursor-pointer" onclick="seekToTime(${c.start_time})">
+                        <span class="timestamp-link">${formatTime(c.start_time)}</span>
+                        <p class="text-gray-700">${c.text}</p>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('chatHeader').innerHTML = `
+                <h1 class="text-xl font-bold text-gray-800">${data.title}</h1>
+                <p class="text-sm text-gray-600">Language: ${data.language}</p>`;
+            
+            loadChatHistory(videoId);
+            
+            document.getElementById('chatInput').disabled = false;
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('quizBtn').disabled = false;
+            document.getElementById('flashcardsBtn').disabled = false;
+            document.getElementById('notesBtn').disabled = false;
+        }
+
+        function addVideoToHistory(data) {
+            const list = document.getElementById('videoList');
+            const placeholder = list.querySelector('.text-center');
+            if (placeholder) placeholder.remove();
+            
+            const item = document.createElement('div');
+            item.className = 'video-item p-3 rounded-lg active';
+            item.dataset.videoId = data.video_id;
+            item.onclick = () => switchToVideo(data.video_id);
+            
+            item.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <img src="https://img.youtube.com/vi/${data.video_id}/default.jpg" class="w-12 h-9 rounded">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-medium text-sm text-gray-800 truncate">${data.title}</div>
+                        <div class="text-xs text-gray-500">${data.language} • ${data.chunks?.length || 0} segments</div>
+                    </div>
+                </div>
+            `;
+            
+            list.insertBefore(item, list.firstChild);
+        }
+
+        async function loadChatHistory(videoId) {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = '';
+            
+            try {
+                const res = await fetch(`http://localhost:5000/api/history/${videoId}`);
+                const data = await res.json();
+                
+                if (data.history?.length) {
+                    data.history.reverse().forEach(item => {
+                        addUserMessage(item.question);
+                        addAssistantMessage(item.answer, item.relevant_chunks);
+                    });
+                } else {
+                    addSystemMessage('Start asking questions!');
+                }
+            } catch (e) {
+                addSystemMessage('Ready!');
+            }
+        }
+
+        function addSystemMessage(text) {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML += `
+                <div class="fade-in text-center">
+                    <div class="inline-block px-4 py-3 bg-blue-50 text-blue-700 rounded-lg text-sm">
+                        <i class="fas fa-info-circle mr-2"></i>${text}
+                    </div>
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addUserMessage(text) {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML += `
+                <div class="fade-in flex justify-end">
+                    <div class="max-w-md px-4 py-3 chat-bubble-user">${text}</div>
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function addAssistantMessage(text, chunks) {
+            let sources = '';
+            if (chunks?.length) {
+                sources = `<div class="mt-3 pt-3 border-t"><div class="flex flex-wrap gap-1">
+                    ${chunks.map(c => `<span class="timestamp-link" onclick="seekToTime(${c.start_time})">${c.timestamp}</span>`).join('')}
+                </div></div>`;
+            }
+            
+            const container = document.getElementById('chatContainer');
+            container.innerHTML += `
+                <div class="fade-in flex justify-start">
+                    <div class="max-w-2xl px-4 py-3 chat-bubble-assistant">
+                        ${text}${sources}
+                    </div>
+                </div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const q = document.getElementById('chatInput').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (!q || !apiKey || !currentVideoId) return;
+            
+            addUserMessage(q);
+            document.getElementById('chatInput').value = '';
+            
+            try {
+                const res = await fetch('http://localhost:5000/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ video_id: currentVideoId, query: q, api_key: apiKey })
+                });
+                
+                const data = await res.json();
+                addAssistantMessage(data.answer, data.relevant_chunks);
+            } catch (e) {
+                addAssistantMessage('Error: ' + e.message);
+            }
+        }
+
+        function seekToTime(s) {
+            const iframe = document.getElementById('ytPlayer');
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(JSON.stringify({
+                    event: 'command', func: 'seekTo', args: [s, true]
+                }), '*');
+            }
+        }
+
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${m}:${sec.toString().padStart(2, '0')}`;
+        }
+
+        // Study Buddy
+        function openStudyBuddy(mode) {
+            if (!currentVideoId) return alert('Load a video first');
+            document.getElementById('studyBuddyModal').classList.remove('hidden');
+            
+            const title = document.getElementById('studyBuddyTitle');
+            const icon = document.getElementById('studyBuddyIcon');
+            
+            if (mode === 'quiz') {
+                title.textContent = 'Quiz';
+                icon.className = 'fas fa-question-circle text-purple-600';
+                showQuizOptions();
+            } else if (mode === 'flashcards') {
+                title.textContent = 'Flashcards';
+                icon.className = 'fas fa-layer-group text-blue-600';
+                showFlashcardOptions();
+            } else if (mode === 'notes') {
+                title.textContent = 'Notes';
+                icon.className = 'fas fa-file-alt text-green-600';
+                generateStudyNotes();
+            }
+        }
+
+        function closeStudyBuddy() {
+            document.getElementById('studyBuddyModal').classList.add('hidden');
+        }
+
+        function showQuizOptions() {
+            document.getElementById('studyBuddyContent').innerHTML = `
+                <div class="max-w-md mx-auto">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Number of Questions</label>
+                        <select id="numQuestions" class="w-full px-4 py-2 input-field rounded-lg">
+                            <option value="5">5 questions</option>
+                            <option value="10">10 questions</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Difficulty</label>
+                        <select id="difficulty" class="w-full px-4 py-2 input-field rounded-lg">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <button onclick="generateQuiz()" class="w-full py-3 btn-primary rounded-lg">Generate Quiz</button>
+                </div>`;
+        }
+
+        async function generateQuiz() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) return alert('Enter API key');
+            
+            // Get values BEFORE clearing content
+            const numQuestionsEl = document.getElementById('numQuestions');
+            const difficultyEl = document.getElementById('difficulty');
+            
+            if (!numQuestionsEl || !difficultyEl) {
+                return alert('Please select quiz options first');
+            }
+            
+            const numQuestions = parseInt(numQuestionsEl.value);
+            const difficulty = difficultyEl.value;
+            
+            // NOW clear and show loading
+            const content = document.getElementById('studyBuddyContent');
+            content.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-purple-600"></i><p class="mt-4">Generating quiz...</p></div>';
+            
+            try {
+                const res = await fetch('http://localhost:5000/api/study-buddy/quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        video_id: currentVideoId,
+                        num_questions: numQuestions,
+                        difficulty: difficulty,
+                        api_key: apiKey
+                    })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                
+                quizState = { questions: data.questions, currentQuestion: 0, score: 0, answers: [] };
+                displayQuizQuestion();
+            } catch (e) {
+                content.innerHTML = `<div class="text-red-600 text-center">Error: ${e.message}</div>`;
+            }
+        }
+
+        function displayQuizQuestion() {
+            const q = quizState.questions[quizState.currentQuestion];
+            const content = document.getElementById('studyBuddyContent');
+            
+            content.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="mb-6">
+                        <p class="text-sm text-gray-500">Question ${quizState.currentQuestion + 1} of ${quizState.questions.length}</p>
+                        <h3 class="text-xl font-semibold mt-2">${q.question}</h3>
+                    </div>
+                    <div class="space-y-3">
+                        ${q.options.map((opt, i) => `
+                            <button onclick="answerQuestion(${i})" class="w-full text-left px-4 py-3 btn-secondary rounded-lg hover:bg-blue-50">
+                                ${String.fromCharCode(65 + i)}. ${opt}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>`;
+        }
+
+        function answerQuestion(idx) {
+            const q = quizState.questions[quizState.currentQuestion];
+            const correct = idx === q.correct_answer;
+            if (correct) quizState.score++;
+            quizState.answers.push({});
+            
+            const content = document.getElementById('studyBuddyContent');
+            content.innerHTML = `
+                <div class="max-w-2xl mx-auto text-center">
+                    <div class="w-20 h-20 rounded-full mx-auto mb-4 ${correct ? 'bg-green-100' : 'bg-red-100'} flex items-center justify-center">
+                        <i class="fas fa-${correct ? 'check' : 'times'} text-4xl ${correct ? 'text-green-600' : 'text-red-600'}"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">${correct ? 'Correct!' : 'Incorrect'}</h3>
+                    <p class="text-gray-700 mb-2"><strong>Your answer:</strong> ${q.options[idx]}</p>
+                    ${!correct ? `<p class="text-gray-700 mb-2"><strong>Correct:</strong> ${q.options[q.correct_answer]}</p>` : ''}
+                    <p class="text-gray-600 mt-4">${q.explanation}</p>
+                    <button onclick="${quizState.currentQuestion < quizState.questions.length - 1 ? 'nextQuestion()' : 'showQuizResults()'}" 
+                        class="mt-6 px-6 py-3 btn-primary rounded-lg">
+                        ${quizState.currentQuestion < quizState.questions.length - 1 ? 'Next' : 'Results'}
+                    </button>
+                </div>`;
+        }
+
+        function nextQuestion() {
+            quizState.currentQuestion++;
+            displayQuizQuestion();
+        }
+
+        function showQuizResults() {
+            const pct = Math.round((quizState.score / quizState.questions.length) * 100);
+            document.getElementById('studyBuddyContent').innerHTML = `
+                <div class="text-center">
+                    <div class="w-32 h-32 rounded-full mx-auto mb-4 bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                        <span class="text-5xl font-bold text-white">${pct}%</span>
+                    </div>
+                    <h3 class="text-3xl font-bold mb-2">Complete!</h3>
+                    <p class="text-xl text-gray-600 mb-8">${quizState.score} / ${quizState.questions.length}</p>
+                    <button onclick="closeStudyBuddy()" class="px-6 py-3 btn-primary rounded-lg">Done</button>
+                </div>`;
+        }
+
+        function showFlashcardOptions() {
+            document.getElementById('studyBuddyContent').innerHTML = `
+                <div class="max-w-md mx-auto">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Number of Flashcards</label>
+                        <select id="numCards" class="w-full px-4 py-2 input-field rounded-lg">
+                            <option value="10">10 cards</option>
+                            <option value="15">15 cards</option>
+                            <option value="20">20 cards</option>
+                        </select>
+                    </div>
+                    <button onclick="generateFlashcards()" class="w-full py-3 btn-primary rounded-lg">Generate Flashcards</button>
+                </div>`;
+        }
+
+        async function generateFlashcards() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) return alert('Enter API key');
+            
+            // Get value BEFORE clearing content
+            const numCardsEl = document.getElementById('numCards');
+            
+            if (!numCardsEl) {
+                return alert('Please select flashcard options first');
+            }
+            
+            const numCards = parseInt(numCardsEl.value);
+            
+            // NOW clear and show loading
+            const content = document.getElementById('studyBuddyContent');
+            content.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i><p class="mt-4">Creating flashcards...</p></div>';
+            
+            try {
+                const res = await fetch('http://localhost:5000/api/study-buddy/flashcards', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        video_id: currentVideoId,
+                        num_cards: numCards,
+                        api_key: apiKey
+                    })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                
+                window.flashcards = data.flashcards;
+                currentCardIndex = 0;
+                showingFront = true;
+                showFlashcard();
+            } catch (e) {
+                content.innerHTML = `<div class="text-red-600 text-center">Error: ${e.message}</div>`;
+            }
+        }
+
+        function showFlashcard() {
+            const cards = window.flashcards;
+            const card = cards[currentCardIndex];
+            const content = document.getElementById('studyBuddyContent');
+            
+            content.innerHTML = `
+                <div class="max-w-2xl mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <span class="text-sm font-medium text-gray-500">Card ${currentCardIndex + 1} of ${cards.length}</span>
+                        <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">${card.category}</span>
+                    </div>
+                    
+                    <div onclick="flipCard()" class="bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl p-8 min-h-[300px] flex items-center justify-center cursor-pointer shadow-lg mb-6">
+                        <div class="text-center text-white">
+                            <p class="text-xs uppercase tracking-wide mb-4 opacity-80">${showingFront ? 'Front' : 'Back'}</p>
+                            <p class="text-2xl font-semibold">${showingFront ? card.front : card.back}</p>
+                            <p class="text-sm mt-6 opacity-60">Click to flip</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="previousCard()" ${currentCardIndex === 0 ? 'disabled' : ''} 
+                            class="px-6 py-3 btn-secondary rounded-lg disabled:opacity-50">
+                            <i class="fas fa-arrow-left mr-2"></i> Previous
+                        </button>
+                        <button onclick="nextCard()" ${currentCardIndex === cards.length - 1 ? 'disabled' : ''} 
+                            class="flex-1 px-6 py-3 btn-primary rounded-lg disabled:opacity-50">
+                            Next <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function flipCard() {
+            showingFront = !showingFront;
+            showFlashcard();
+        }
+
+        function previousCard() {
+            if (currentCardIndex > 0) {
+                currentCardIndex--;
+                showingFront = true;
+                showFlashcard();
+            }
+        }
+
+        function nextCard() {
+            if (currentCardIndex < window.flashcards.length - 1) {
+                currentCardIndex++;
+                showingFront = true;
+                showFlashcard();
+            }
+        }
+
+        async function generateStudyNotes() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                closeStudyBuddy();
+                return alert('Enter API key');
+            }
+            
+            const content = document.getElementById('studyBuddyContent');
+            content.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-green-600"></i><p class="mt-4">Generating notes...</p></div>';
+            
+            try {
+                const res = await fetch('http://localhost:5000/api/study-buddy/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        video_id: currentVideoId,
+                        api_key: apiKey
+                    })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+                
+                content.innerHTML = `
+                    <div class="max-w-3xl mx-auto">
+                        <div class="mb-6 flex gap-3">
+                            <button onclick="copyNotes()" class="px-4 py-2 btn-secondary rounded-lg text-sm">
+                                <i class="fas fa-copy mr-2"></i> Copy
+                            </button>
+                            <button onclick="downloadNotes()" class="px-4 py-2 btn-secondary rounded-lg text-sm">
+                                <i class="fas fa-download mr-2"></i> Download
+                            </button>
+                        </div>
+                        
+                        <div id="studyNotesContent" class="bg-gray-50 rounded-lg p-6">
+                            ${data.notes.replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                content.innerHTML = `<div class="text-red-600 text-center">Error: ${e.message}</div>`;
+            }
+        }
+
+        function copyNotes() {
+            const notes = document.getElementById('studyNotesContent').innerText;
+            navigator.clipboard.writeText(notes).then(() => alert('Copied!'));
+        }
+
+        function downloadNotes() {
+            const notes = document.getElementById('studyNotesContent').innerText;
+            const blob = new Blob([notes], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'study-notes.txt';
+            a.click();
+        }
+
+        // Keyboard shortcuts
+        document.getElementById('chatInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        document.getElementById('videoUrlInput').addEventListener('keypress', e => {
+            if (e.key === 'Enter') loadVideo();
+        });
+    </script>
+</body>
+</html>

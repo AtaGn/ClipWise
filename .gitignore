@@ -1,0 +1,32 @@
+# Database files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Temporary files
+temp_audio/
+chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment
+.env
+.venv
+env/
+venv/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Audio files
+*.wav
+*.mp3
+*.m4a
+*.webmassets/logo.png
