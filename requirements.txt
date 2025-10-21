@@ -1,29 +1,12 @@
-# Core web framework
-flask==3.0.0
-flask-cors==4.0.0
-
-# YouTube downloader
-yt-dlp>=2025.1.1
-
-# Whisper + PyTorch stack
-openai-whisper==20231117
-torch==2.1.2
-torchaudio==2.1.2
-
-# Core dependencies
-numpy==1.24.3
-requests>=2.32.2
-
-# NLP / Embeddings
-sentence-transformers==2.6.1
-transformers==4.39.3
-
-# Vector database
-chromadb==0.5.5
-
-# Language detection
-langdetect==1.0.9
-
-# Optional: performance & stability improvements
-tqdm>=4.66.3
-pandas>=2.2.2
+flask
+flask-cors
+yt-dlp
+openai-whisper
+torch
+torchaudio
+numpy
+requests
+sentence-transformers
+chromadb
+sqlalchemy
+langdetect
