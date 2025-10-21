@@ -1,5 +1,7 @@
 # ClipWise — YouTube RAG Study Assistant
 
+<img width="3644" height="375" alt="QR kodu (2)" src="https://github.com/user-attachments/assets/b21be8ef-4e25-4b96-b2b0-381021dea580" />
+
 An AI-powered web application that transforms any YouTube video into an interactive study companion.
 
 ---
@@ -15,7 +17,6 @@ An AI-powered web application that transforms any YouTube video into an interact
 - [Technology Stack](#technology-stack)
 - [API Configuration](#api-configuration)
 - [How It Works](#how-it-works)
-- [Developer](#developer)
 
 ---
 
@@ -191,7 +192,10 @@ pandas>=2.2.2
 ### Frontend
 - HTML5
 - TailwindCSS for responsive design
-- Vanilla JavaScript for dynamic interactions
+- JavaScript for dynamic interactions
+
+<img width="1861" height="1277" alt="frontend" src="https://github.com/user-attachments/assets/475924ca-68b7-4aed-8649-ebbdd3eb819b" />
+
 
 ### Backend
 - Flask web framework
@@ -227,15 +231,12 @@ ClipWise requires a Groq API key to enable AI-powered features including chat re
 ## How It Works
 
 ### Problem Statement
-
 Finding key information in long educational YouTube videos is time-consuming and inefficient. Traditional methods require watching entire videos or manually searching through transcripts.
 
 ### Solution
-
 ClipWise automates this process through transcription, semantic retrieval, and AI-driven question answering, allowing users to study interactively and efficiently. The RAG architecture ensures responses are grounded in actual video content rather than hallucinated information.
 
 ### Technical Implementation
-
 **Step 1: Audio Extraction**
 The system uses `yt-dlp` to download audio from YouTube videos in optimal quality.
 
